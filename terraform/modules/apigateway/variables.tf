@@ -1,0 +1,47 @@
+variable "region" {
+  description = "AWS region"
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "api_name" {
+  description = "Name of the API Gateway"
+  type        = string
+  default     = "todo-list-api"
+}
+
+variable "stage_name" {
+  description = "Deployment stage"
+  type        = string
+  default     = "dev"
+}
+
+variable "create_lambda_invoke_arn" {
+  description = "Invoke ARN of the create lambda"
+  type        = string
+}
+
+variable "create_lambda_function_name" {
+  description = "Function name of the create lambda"
+  type        = string
+}
+
+variable "list_lambda_invoke_arn" {
+  description = "Invoke ARN of the list lambda"
+  type        = string
+}
+
+variable "list_lambda_function_name" {
+  description = "Function name of the list lambda"
+  type        = string
+}
+
+variable "update_lambda_invoke_arn" {
+  description = "Invoke ARN of the update lambda"
+  type        = string
+}
+
+variable "update_lambda_function_name" {
+  description = "Function name of the update lambda"
+  type        = string
+}
