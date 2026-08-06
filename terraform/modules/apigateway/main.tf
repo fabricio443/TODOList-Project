@@ -18,6 +18,42 @@ resource "aws_api_gateway_rest_api" "this" {
   description = "API Gateway para o projeto TODO List"
 }
 
+resource "aws_cognito_user_pool" "this" {
+  name = "todo-list-dev-user-pool"
+
+  password_policy {
+    minimum_length                   = 8
+    require_lowercase                = true
+    require_numbers                  = true
+    require_symbols                  = false
+    require_uppercase                = true
+    temporary_password_validity_days = 7
+  }
+
+  auto_verified_attributes = ["email"]
+  username_attributes      = ["email"]
+}
+
+resource "aws_cognito_user_pool_client" "this" {
+  name         = "todo-list-dev-app-client"
+  user_pool_id = aws_cognito_user_pool.this.id
+
+  explicit_auth_flows = [
+    "ALLOW_USER_PASSWORD_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH"
+  ]
+
+  generate_secret = false
+}
+
+resource "aws_api_gateway_authorizer" "cognito" {
+  name            = "todo-list-cognito-authorizer"
+  rest_api_id     = aws_api_gateway_rest_api.this.id
+  type            = "COGNITO_USER_POOLS"
+  identity_source = "method.request.header.Authorization"
+  provider_arns   = [aws_cognito_user_pool.this.arn]
+}
+
 resource "aws_api_gateway_resource" "task_lists" {
   rest_api_id = aws_api_gateway_rest_api.this.id
   parent_id   = aws_api_gateway_rest_api.this.root_resource_id
@@ -28,21 +64,24 @@ resource "aws_api_gateway_method" "post" {
   rest_api_id   = aws_api_gateway_rest_api.this.id
   resource_id   = aws_api_gateway_resource.task_lists.id
   http_method   = "POST"
-  authorization = "NONE"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id
 }
 
 resource "aws_api_gateway_method" "get" {
   rest_api_id   = aws_api_gateway_rest_api.this.id
   resource_id   = aws_api_gateway_resource.task_lists.id
   http_method   = "GET"
-  authorization = "NONE"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id
 }
 
 resource "aws_api_gateway_method" "put" {
   rest_api_id   = aws_api_gateway_rest_api.this.id
   resource_id   = aws_api_gateway_resource.task_lists.id
   http_method   = "PUT"
-  authorization = "NONE"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id
 }
 
 resource "aws_api_gateway_integration" "post_integration" {
@@ -120,4 +159,16 @@ output "api_gateway_url" {
 
 output "execution_arn" {
   value = aws_api_gateway_rest_api.this.execution_arn
+}
+
+output "cognito_user_pool_id" {
+  value = aws_cognito_user_pool.this.id
+}
+
+output "cognito_user_pool_client_id" {
+  value = aws_cognito_user_pool_client.this.id
+}
+
+output "cognito_authorizer_id" {
+  value = aws_api_gateway_authorizer.cognito.id
 }
