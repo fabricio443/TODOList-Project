@@ -39,14 +39,22 @@ module "lambda_update" {
 }
 
 module "apigateway" {
-  source                    = "../../modules/apigateway"
-  region                    = "us-east-1"
-  api_name                  = "todo-list-api"
-  stage_name                = "dev"
-  create_lambda_invoke_arn  = module.lambda_create.aws_lambda_function_invoke_arn
+  source                      = "../../modules/apigateway"
+  region                      = "us-east-1"
+  api_name                    = "todo-list-api"
+  stage_name                  = "dev"
+  create_lambda_invoke_arn    = module.lambda_create.aws_lambda_function_invoke_arn
   create_lambda_function_name = module.lambda_create.aws_lambda_function_name
-  list_lambda_invoke_arn    = module.lambda_list.aws_lambda_function_invoke_arn
-  list_lambda_function_name = module.lambda_list.aws_lambda_function_name
-  update_lambda_invoke_arn  = module.lambda_update.aws_lambda_function_invoke_arn
+  list_lambda_invoke_arn      = module.lambda_list.aws_lambda_function_invoke_arn
+  list_lambda_function_name   = module.lambda_list.aws_lambda_function_name
+  update_lambda_invoke_arn    = module.lambda_update.aws_lambda_function_invoke_arn
   update_lambda_function_name = module.lambda_update.aws_lambda_function_name
+}
+
+output "cognito_user_pool_id" {
+  value = module.apigateway.cognito_user_pool_id
+}
+
+output "cognito_user_pool_client_id" {
+  value = module.apigateway.cognito_user_pool_client_id
 }
