@@ -20,7 +20,7 @@ jobs:
           java-version: '17'
           cache: maven
 
-      - name: Configurar credenciais da AWS
+      - name: Configurar credenciais AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -37,10 +37,14 @@ jobs:
         working-directory: terraform/environments/dev
         run: terraform init
 
+      - name: Validar Terraform
+        working-directory: terraform/environments/dev
+        run: terraform validate
+
       - name: Planejar implantação
         working-directory: terraform/environments/dev
-        run: terraform plan
+        run: terraform plan -input=false
 
       - name: Aplicar infraestrutura
         working-directory: terraform/environments/dev
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -input=false
