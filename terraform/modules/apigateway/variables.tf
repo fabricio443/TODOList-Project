@@ -36,6 +36,16 @@ variable "list_lambda_function_name" {
   type        = string
 }
 
+variable "add_task_lambda_invoke_arn" {
+  description = "Invoke ARN of the add task lambda"
+  type        = string
+}
+
+variable "add_task_lambda_function_name" {
+  description = "Function name of the add task lambda"
+  type        = string
+}
+
 variable "update_lambda_invoke_arn" {
   description = "Invoke ARN of the update lambda"
   type        = string
