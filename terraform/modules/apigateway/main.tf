@@ -131,6 +131,14 @@ resource "aws_api_gateway_method" "task_list_tasks_post" {
   authorizer_id = aws_api_gateway_authorizer.cognito.id
 }
 
+resource "aws_api_gateway_method" "task_list_tasks_get" {
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.task_list_tasks.id
+  http_method   = "GET"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id
+}
+
 resource "aws_api_gateway_integration" "task_list_tasks_post_integration" {
   rest_api_id             = aws_api_gateway_rest_api.this.id
   resource_id             = aws_api_gateway_resource.task_list_tasks.id
@@ -140,10 +148,50 @@ resource "aws_api_gateway_integration" "task_list_tasks_post_integration" {
   uri                     = var.add_task_lambda_invoke_arn
 }
 
+resource "aws_api_gateway_integration" "task_list_tasks_get_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.this.id
+  resource_id             = aws_api_gateway_resource.task_list_tasks.id
+  http_method             = aws_api_gateway_method.task_list_tasks_get.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = var.list_task_items_lambda_invoke_arn
+}
+
+resource "aws_api_gateway_resource" "task_list_tasks_taskid" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_resource.task_list_tasks.id
+  path_part   = "{taskId}"
+}
+
+resource "aws_api_gateway_method" "task_list_tasks_taskid_put" {
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.task_list_tasks_taskid.id
+  http_method   = "PUT"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id
+}
+
+resource "aws_api_gateway_integration" "task_list_tasks_taskid_put_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.this.id
+  resource_id             = aws_api_gateway_resource.task_list_tasks_taskid.id
+  http_method             = aws_api_gateway_method.task_list_tasks_taskid_put.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = var.update_task_item_lambda_invoke_arn
+}
+
 resource "aws_lambda_permission" "add_task_permission" {
   statement_id  = "AllowExecutionFromAPIGatewayAddTask"
   action        = "lambda:InvokeFunction"
   function_name = var.add_task_lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.this.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "list_task_items_permission" {
+  statement_id  = "AllowExecutionFromAPIGatewayListTaskItems"
+  action        = "lambda:InvokeFunction"
+  function_name = var.list_task_items_lambda_function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.this.execution_arn}/*/*"
 }
@@ -172,16 +220,27 @@ resource "aws_lambda_permission" "update_permission" {
   source_arn    = "${aws_api_gateway_rest_api.this.execution_arn}/*/*"
 }
 
+resource "aws_lambda_permission" "update_task_item_permission" {
+  statement_id  = "AllowExecutionFromAPIGatewayUpdateTaskItem"
+  action        = "lambda:InvokeFunction"
+  function_name = var.update_task_item_lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.this.execution_arn}/*/*"
+}
+
 resource "aws_api_gateway_deployment" "this" {
   depends_on = [
     aws_api_gateway_integration.post_integration,
     aws_api_gateway_integration.get_integration,
     aws_api_gateway_integration.put_integration,
     aws_api_gateway_integration.task_list_tasks_post_integration,
+    aws_api_gateway_integration.task_list_tasks_get_integration,
+    aws_api_gateway_integration.task_list_tasks_taskid_put_integration,
     aws_lambda_permission.create_permission,
     aws_lambda_permission.list_permission,
     aws_lambda_permission.update_permission,
-    aws_lambda_permission.add_task_permission
+    aws_lambda_permission.add_task_permission,
+    aws_lambda_permission.list_task_items_permission
   ]
 
   rest_api_id = aws_api_gateway_rest_api.this.id

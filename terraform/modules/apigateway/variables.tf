@@ -46,6 +46,16 @@ variable "add_task_lambda_function_name" {
   type        = string
 }
 
+variable "list_task_items_lambda_invoke_arn" {
+  description = "Invoke ARN of the list task items lambda"
+  type        = string
+}
+
+variable "list_task_items_lambda_function_name" {
+  description = "Function name of the list task items lambda"
+  type        = string
+}
+
 variable "update_lambda_invoke_arn" {
   description = "Invoke ARN of the update lambda"
   type        = string
@@ -53,5 +63,15 @@ variable "update_lambda_invoke_arn" {
 
 variable "update_lambda_function_name" {
   description = "Function name of the update lambda"
+  type        = string
+}
+
+variable "update_task_item_lambda_invoke_arn" {
+  description = "Invoke ARN of the update task item lambda"
+  type        = string
+}
+
+variable "update_task_item_lambda_function_name" {
+  description = "Function name of the update task item lambda"
   type        = string
 }
