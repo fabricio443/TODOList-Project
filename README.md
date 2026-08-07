@@ -220,6 +220,29 @@ Resposta:
 }
 ```
 
+---
+
+### Listar tarefas de uma lista
+
+**GET**
+
+```
+/task-lists/{listId}/tasks
+```
+
+Resposta:
+
+```json
+[
+  {
+    "taskId": "123",
+    "name": "Estudar Lambda Java",
+    "status": "PENDING",
+    "createdAt": "2026-08-07T01:16:24Z"
+  }
+]
+```
+
 ## Próximas implementações
 
 * Criar CRUD de tarefas (Tasks)
