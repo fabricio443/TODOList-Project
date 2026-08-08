@@ -10,7 +10,8 @@ terraform {
 }
 
 provider "aws" {
-  region = var.region
+  region                      = var.region
+  skip_credentials_validation = true
 }
 
 resource "aws_api_gateway_rest_api" "this" {
@@ -173,7 +174,28 @@ resource "aws_api_gateway_integration" "task_list_get_integration" {
   type                    = "AWS_PROXY"
   uri                     = var.get_task_list_lambda_invoke_arn
 }
+resource "aws_api_gateway_resource" "task_list_report" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_resource.task_list_id.id
+  path_part   = "report"
+}
 
+resource "aws_api_gateway_method" "task_list_report_get" {
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.task_list_report.id
+  http_method   = "GET"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id
+}
+
+resource "aws_api_gateway_integration" "task_list_report_get_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.this.id
+  resource_id             = aws_api_gateway_resource.task_list_report.id
+  http_method             = aws_api_gateway_method.task_list_report_get.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = var.generate_report_lambda_invoke_arn
+}
 resource "aws_api_gateway_resource" "task_list_tasks_taskid" {
   rest_api_id = aws_api_gateway_rest_api.this.id
   parent_id   = aws_api_gateway_resource.task_list_tasks.id
@@ -278,12 +300,21 @@ resource "aws_lambda_permission" "delete_task_item_permission" {
   source_arn    = "${aws_api_gateway_rest_api.this.execution_arn}/*/*"
 }
 
+resource "aws_lambda_permission" "generate_report_permission" {
+  statement_id  = "AllowExecutionFromAPIGatewayGenerateTaskListReport"
+  action        = "lambda:InvokeFunction"
+  function_name = var.generate_report_lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.this.execution_arn}/*/*"
+}
+
 resource "aws_api_gateway_deployment" "this" {
   depends_on = [
     aws_api_gateway_integration.post_integration,
     aws_api_gateway_integration.get_integration,
     aws_api_gateway_integration.put_integration,
     aws_api_gateway_integration.task_list_get_integration,
+    aws_api_gateway_integration.task_list_report_get_integration,
     aws_api_gateway_integration.task_list_tasks_post_integration,
     aws_api_gateway_integration.task_list_tasks_get_integration,
     aws_api_gateway_integration.task_list_tasks_taskid_put_integration,
@@ -295,7 +326,8 @@ resource "aws_api_gateway_deployment" "this" {
     aws_lambda_permission.add_task_permission,
     aws_lambda_permission.list_task_items_permission,
     aws_lambda_permission.update_task_item_permission,
-    aws_lambda_permission.delete_task_item_permission
+    aws_lambda_permission.delete_task_item_permission,
+    aws_lambda_permission.generate_report_permission
   ]
 
   rest_api_id = aws_api_gateway_rest_api.this.id

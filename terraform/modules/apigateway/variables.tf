@@ -95,3 +95,13 @@ variable "delete_task_item_lambda_function_name" {
   description = "Function name of the delete task item lambda"
   type        = string
 }
+
+variable "generate_report_lambda_invoke_arn" {
+  description = "Invoke ARN of the generate task list report lambda"
+  type        = string
+}
+
+variable "generate_report_lambda_function_name" {
+  description = "Function name of the generate task list report lambda"
+  type        = string
+}

@@ -1,3 +1,3 @@
-region = "us-east-1"
+region      = "us-east-1"
 environment = "dev"
-table_name = "todo-list"
+table_name  = "todo-list"
