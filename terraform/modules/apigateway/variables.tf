@@ -75,3 +75,13 @@ variable "update_task_item_lambda_function_name" {
   description = "Function name of the update task item lambda"
   type        = string
 }
+
+variable "get_task_list_lambda_invoke_arn" {
+  description = "Invoke ARN of the get task list lambda"
+  type        = string
+}
+
+variable "get_task_list_lambda_function_name" {
+  description = "Function name of the get task list lambda"
+  type        = string
+}
