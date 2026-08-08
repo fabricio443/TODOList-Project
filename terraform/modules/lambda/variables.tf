@@ -36,3 +36,27 @@ variable "dynamodb_actions" {
   type        = list(string)
   default     = ["dynamodb:PutItem"]
 }
+
+variable "s3_bucket_arn" {
+  description = "S3 bucket ARN the Lambda should access (optional)"
+  type        = string
+  default     = ""
+}
+
+variable "s3_bucket_name" {
+  description = "S3 bucket name to provide to the Lambda as environment variable (optional)"
+  type        = string
+  default     = ""
+}
+
+variable "s3_actions" {
+  description = "S3 actions for the Lambda role (optional)"
+  type        = list(string)
+  default     = []
+}
+
+variable "enable_s3" {
+  description = "Whether to attach S3 policy to the Lambda (use when bucket access is required)"
+  type        = bool
+  default     = false
+}
