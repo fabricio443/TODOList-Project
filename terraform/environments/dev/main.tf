@@ -93,6 +93,30 @@ module "lambda_delete_task_item" {
   dynamodb_actions = ["dynamodb:GetItem", "dynamodb:DeleteItem"]
 }
 
+resource "aws_sqs_queue" "user_requests" {
+  name = var.queue_name
+
+  tags = {
+    Environment = var.environment
+    Name        = "user-request-queue"
+  }
+}
+
+module "lambda_submit_user_request" {
+  source           = "../../modules/lambda"
+  region           = "us-east-1"
+  function_name    = "todo-submit-user-request"
+  lambda_zip_path  = "../../../target/todolist-project-1.0-SNAPSHOT.jar"
+  table_name       = module.dynamodb.table_name
+  table_arn        = module.dynamodb.table_arn
+  handler          = "com.exemplo.lambda.SubmitUserRequestLambda::handleRequest"
+  dynamodb_actions = []
+  sqs_queue_url    = aws_sqs_queue.user_requests.url
+  sqs_queue_arn    = aws_sqs_queue.user_requests.arn
+  sqs_actions      = ["sqs:SendMessage"]
+  enable_sqs       = true
+}
+
 resource "aws_s3_bucket" "reports" {
   bucket = "todo-list-reports-dev"
   acl    = "private"
@@ -119,28 +143,30 @@ module "lambda_generate_report" {
 }
 
 module "apigateway" {
-  source                                = "../../modules/apigateway"
-  region                                = "us-east-1"
-  api_name                              = "todo-list-api"
-  stage_name                            = "dev"
-  create_lambda_invoke_arn              = module.lambda_create.aws_lambda_function_invoke_arn
-  create_lambda_function_name           = module.lambda_create.aws_lambda_function_name
-  list_lambda_invoke_arn                = module.lambda_list.aws_lambda_function_invoke_arn
-  list_lambda_function_name             = module.lambda_list.aws_lambda_function_name
-  update_lambda_invoke_arn              = module.lambda_update.aws_lambda_function_invoke_arn
-  update_lambda_function_name           = module.lambda_update.aws_lambda_function_name
-  add_task_lambda_invoke_arn            = module.lambda_create_task_item.aws_lambda_function_invoke_arn
-  add_task_lambda_function_name         = module.lambda_create_task_item.aws_lambda_function_name
-  list_task_items_lambda_invoke_arn     = module.lambda_list_task_items.aws_lambda_function_invoke_arn
-  list_task_items_lambda_function_name  = module.lambda_list_task_items.aws_lambda_function_name
-  update_task_item_lambda_invoke_arn    = module.lambda_update_task_item.aws_lambda_function_invoke_arn
-  update_task_item_lambda_function_name = module.lambda_update_task_item.aws_lambda_function_name
-  get_task_list_lambda_invoke_arn       = module.lambda_get_task_list.aws_lambda_function_invoke_arn
-  get_task_list_lambda_function_name    = module.lambda_get_task_list.aws_lambda_function_name
-  delete_task_item_lambda_invoke_arn    = module.lambda_delete_task_item.aws_lambda_function_invoke_arn
-  delete_task_item_lambda_function_name = module.lambda_delete_task_item.aws_lambda_function_name
-  generate_report_lambda_invoke_arn     = module.lambda_generate_report.aws_lambda_function_invoke_arn
-  generate_report_lambda_function_name  = module.lambda_generate_report.aws_lambda_function_name
+  source                                   = "../../modules/apigateway"
+  region                                   = "us-east-1"
+  api_name                                 = "todo-list-api"
+  stage_name                               = "dev"
+  create_lambda_invoke_arn                 = module.lambda_create.aws_lambda_function_invoke_arn
+  create_lambda_function_name              = module.lambda_create.aws_lambda_function_name
+  list_lambda_invoke_arn                   = module.lambda_list.aws_lambda_function_invoke_arn
+  list_lambda_function_name                = module.lambda_list.aws_lambda_function_name
+  update_lambda_invoke_arn                 = module.lambda_update.aws_lambda_function_invoke_arn
+  update_lambda_function_name              = module.lambda_update.aws_lambda_function_name
+  add_task_lambda_invoke_arn               = module.lambda_create_task_item.aws_lambda_function_invoke_arn
+  add_task_lambda_function_name            = module.lambda_create_task_item.aws_lambda_function_name
+  list_task_items_lambda_invoke_arn        = module.lambda_list_task_items.aws_lambda_function_invoke_arn
+  list_task_items_lambda_function_name     = module.lambda_list_task_items.aws_lambda_function_name
+  update_task_item_lambda_invoke_arn       = module.lambda_update_task_item.aws_lambda_function_invoke_arn
+  update_task_item_lambda_function_name    = module.lambda_update_task_item.aws_lambda_function_name
+  get_task_list_lambda_invoke_arn          = module.lambda_get_task_list.aws_lambda_function_invoke_arn
+  get_task_list_lambda_function_name       = module.lambda_get_task_list.aws_lambda_function_name
+  delete_task_item_lambda_invoke_arn       = module.lambda_delete_task_item.aws_lambda_function_invoke_arn
+  delete_task_item_lambda_function_name    = module.lambda_delete_task_item.aws_lambda_function_name
+  generate_report_lambda_invoke_arn        = module.lambda_generate_report.aws_lambda_function_invoke_arn
+  generate_report_lambda_function_name     = module.lambda_generate_report.aws_lambda_function_name
+  submit_user_request_lambda_invoke_arn    = module.lambda_submit_user_request.aws_lambda_function_invoke_arn
+  submit_user_request_lambda_function_name = module.lambda_submit_user_request.aws_lambda_function_name
 }
 
 

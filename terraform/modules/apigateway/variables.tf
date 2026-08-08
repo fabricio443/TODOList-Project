@@ -105,3 +105,13 @@ variable "generate_report_lambda_function_name" {
   description = "Function name of the generate task list report lambda"
   type        = string
 }
+
+variable "submit_user_request_lambda_invoke_arn" {
+  description = "Invoke ARN of the submit user request lambda"
+  type        = string
+}
+
+variable "submit_user_request_lambda_function_name" {
+  description = "Function name of the submit user request lambda"
+  type        = string
+}
