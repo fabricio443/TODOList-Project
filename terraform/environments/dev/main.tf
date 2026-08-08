@@ -82,6 +82,17 @@ module "lambda_get_task_list" {
   dynamodb_actions = ["dynamodb:GetItem"]
 }
 
+module "lambda_delete_task_item" {
+  source          = "../../modules/lambda"
+  region          = "us-east-1"
+  function_name   = "todo-delete-task-item"
+  lambda_zip_path = "../../../target/todolist-project-1.0-SNAPSHOT.jar"
+  table_name      = module.dynamodb.table_name
+  table_arn       = module.dynamodb.table_arn
+  handler         = "com.exemplo.lambda.DeleteTaskItemLambda::handleRequest"
+  dynamodb_actions = ["dynamodb:GetItem", "dynamodb:DeleteItem"]
+}
+
 module "apigateway" {
   source                      = "../../modules/apigateway"
   region                      = "us-east-1"
@@ -101,6 +112,8 @@ module "apigateway" {
   update_task_item_lambda_function_name = module.lambda_update_task_item.aws_lambda_function_name
   get_task_list_lambda_invoke_arn = module.lambda_get_task_list.aws_lambda_function_invoke_arn
   get_task_list_lambda_function_name = module.lambda_get_task_list.aws_lambda_function_name
+  delete_task_item_lambda_invoke_arn = module.lambda_delete_task_item.aws_lambda_function_invoke_arn
+  delete_task_item_lambda_function_name = module.lambda_delete_task_item.aws_lambda_function_name
 }
 
 output "cognito_user_pool_id" {
