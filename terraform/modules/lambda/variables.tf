@@ -60,3 +60,27 @@ variable "enable_s3" {
   type        = bool
   default     = false
 }
+
+variable "sqs_queue_url" {
+  description = "SQS queue URL to provide to the Lambda as environment variable"
+  type        = string
+  default     = ""
+}
+
+variable "sqs_queue_arn" {
+  description = "SQS queue ARN for Lambda IAM policy"
+  type        = string
+  default     = ""
+}
+
+variable "sqs_actions" {
+  description = "SQS actions for the Lambda role (optional)"
+  type        = list(string)
+  default     = []
+}
+
+variable "enable_sqs" {
+  description = "Whether to attach SQS policy to the Lambda"
+  type        = bool
+  default     = false
+}

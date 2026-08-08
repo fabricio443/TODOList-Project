@@ -35,25 +35,31 @@ resource "aws_iam_role_policy" "lambda_policy" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = var.dynamodb_actions
-        Resource = [
-          var.table_arn,
-          "${var.table_arn}/index/*"
-        ]
-      }
-    ]
+
+    Statement = concat(
+      [
+        {
+          Effect = "Allow"
+          Action = [
+            "logs:CreateLogGroup",
+            "logs:CreateLogStream",
+            "logs:PutLogEvents"
+          ]
+          Resource = "*"
+        }
+      ],
+
+      length(var.dynamodb_actions) > 0 ? [
+        {
+          Effect = "Allow"
+          Action = var.dynamodb_actions
+          Resource = [
+            var.table_arn,
+            "${var.table_arn}/index/*"
+          ]
+        }
+      ] : []
+    )
   })
 }
 
@@ -78,6 +84,25 @@ resource "aws_iam_role_policy" "s3_policy" {
   })
 }
 
+resource "aws_iam_role_policy" "sqs_policy" {
+  count = var.enable_sqs ? 1 : 0
+  name  = "${var.function_name}-sqs-policy"
+  role  = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = var.sqs_actions
+        Resource = [
+          var.sqs_queue_arn
+        ]
+      }
+    ]
+  })
+}
+
 resource "aws_lambda_function" "this" {
   function_name    = var.function_name
   role             = aws_iam_role.lambda_exec.arn
@@ -93,7 +118,8 @@ resource "aws_lambda_function" "this" {
       {
         TABLE_NAME = var.table_name
       },
-      var.enable_s3 && var.s3_bucket_name != "" ? { REPORTS_BUCKET = var.s3_bucket_name } : {}
+      var.enable_s3 && var.s3_bucket_name != "" ? { REPORTS_BUCKET = var.s3_bucket_name } : {},
+      var.enable_sqs && var.sqs_queue_url != "" ? { SQS_QUEUE_URL = var.sqs_queue_url } : {}
     )
   }
 }

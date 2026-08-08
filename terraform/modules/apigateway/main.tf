@@ -196,6 +196,38 @@ resource "aws_api_gateway_integration" "task_list_report_get_integration" {
   type                    = "AWS_PROXY"
   uri                     = var.generate_report_lambda_invoke_arn
 }
+
+resource "aws_api_gateway_resource" "user_requests" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_rest_api.this.root_resource_id
+  path_part   = "user-requests"
+}
+
+resource "aws_api_gateway_method" "submit_user_request_post" {
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.user_requests.id
+  http_method   = "POST"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id
+}
+
+resource "aws_api_gateway_integration" "submit_user_request_post_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.this.id
+  resource_id             = aws_api_gateway_resource.user_requests.id
+  http_method             = aws_api_gateway_method.submit_user_request_post.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = var.submit_user_request_lambda_invoke_arn
+}
+
+resource "aws_lambda_permission" "submit_user_request_permission" {
+  statement_id  = "AllowExecutionFromAPIGatewaySubmitUserRequest"
+  action        = "lambda:InvokeFunction"
+  function_name = var.submit_user_request_lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.this.execution_arn}/*/*"
+}
+
 resource "aws_api_gateway_resource" "task_list_tasks_taskid" {
   rest_api_id = aws_api_gateway_rest_api.this.id
   parent_id   = aws_api_gateway_resource.task_list_tasks.id
@@ -327,7 +359,8 @@ resource "aws_api_gateway_deployment" "this" {
     aws_lambda_permission.list_task_items_permission,
     aws_lambda_permission.update_task_item_permission,
     aws_lambda_permission.delete_task_item_permission,
-    aws_lambda_permission.generate_report_permission
+    aws_lambda_permission.generate_report_permission,
+    aws_lambda_permission.submit_user_request_permission
   ]
 
   rest_api_id = aws_api_gateway_rest_api.this.id
