@@ -71,6 +71,17 @@ module "lambda_update_task_item" {
   dynamodb_actions = ["dynamodb:GetItem", "dynamodb:UpdateItem"]
 }
 
+module "lambda_get_task_list" {
+  source          = "../../modules/lambda"
+  region          = "us-east-1"
+  function_name   = "todo-get-task-list"
+  lambda_zip_path = "../../../target/todolist-project-1.0-SNAPSHOT.jar"
+  table_name      = module.dynamodb.table_name
+  table_arn       = module.dynamodb.table_arn
+  handler         = "com.exemplo.lambda.GetTaskListLambda::handleRequest"
+  dynamodb_actions = ["dynamodb:GetItem"]
+}
+
 module "apigateway" {
   source                      = "../../modules/apigateway"
   region                      = "us-east-1"
@@ -88,6 +99,8 @@ module "apigateway" {
   list_task_items_lambda_function_name = module.lambda_list_task_items.aws_lambda_function_name
   update_task_item_lambda_invoke_arn = module.lambda_update_task_item.aws_lambda_function_invoke_arn
   update_task_item_lambda_function_name = module.lambda_update_task_item.aws_lambda_function_name
+  get_task_list_lambda_invoke_arn = module.lambda_get_task_list.aws_lambda_function_invoke_arn
+  get_task_list_lambda_function_name = module.lambda_get_task_list.aws_lambda_function_name
 }
 
 output "cognito_user_pool_id" {
