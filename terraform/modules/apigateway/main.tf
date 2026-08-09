@@ -351,6 +351,7 @@ resource "aws_api_gateway_deployment" "this" {
     aws_api_gateway_integration.task_list_tasks_get_integration,
     aws_api_gateway_integration.task_list_tasks_taskid_put_integration,
     aws_api_gateway_integration.task_list_tasks_taskid_delete_integration,
+    aws_api_gateway_integration.submit_user_request_post_integration,
     aws_lambda_permission.create_permission,
     aws_lambda_permission.list_permission,
     aws_lambda_permission.update_permission,
@@ -365,6 +366,127 @@ resource "aws_api_gateway_deployment" "this" {
 
   rest_api_id = aws_api_gateway_rest_api.this.id
   stage_name  = var.stage_name
+
+  triggers = {
+    deployment_hash = sha1(jsonencode({
+      authorizer = {
+        id            = aws_api_gateway_authorizer.cognito.id
+        provider_arns = aws_api_gateway_authorizer.cognito.provider_arns
+      }
+      resources = {
+        task_lists             = aws_api_gateway_resource.task_lists.path_part
+        task_list_id           = aws_api_gateway_resource.task_list_id.path_part
+        task_list_tasks        = aws_api_gateway_resource.task_list_tasks.path_part
+        task_list_report       = aws_api_gateway_resource.task_list_report.path_part
+        user_requests          = aws_api_gateway_resource.user_requests.path_part
+        task_list_tasks_taskid = aws_api_gateway_resource.task_list_tasks_taskid.path_part
+      }
+      methods = {
+        post = {
+          http_method   = aws_api_gateway_method.post.http_method
+          authorization = aws_api_gateway_method.post.authorization
+          authorizer_id = aws_api_gateway_method.post.authorizer_id
+        }
+        get = {
+          http_method   = aws_api_gateway_method.get.http_method
+          authorization = aws_api_gateway_method.get.authorization
+          authorizer_id = aws_api_gateway_method.get.authorizer_id
+        }
+        put = {
+          http_method   = aws_api_gateway_method.put.http_method
+          authorization = aws_api_gateway_method.put.authorization
+          authorizer_id = aws_api_gateway_method.put.authorizer_id
+        }
+        task_list_get = {
+          http_method   = aws_api_gateway_method.task_list_get.http_method
+          authorization = aws_api_gateway_method.task_list_get.authorization
+          authorizer_id = aws_api_gateway_method.task_list_get.authorizer_id
+        }
+        task_list_report_get = {
+          http_method   = aws_api_gateway_method.task_list_report_get.http_method
+          authorization = aws_api_gateway_method.task_list_report_get.authorization
+          authorizer_id = aws_api_gateway_method.task_list_report_get.authorizer_id
+        }
+        task_list_tasks_post = {
+          http_method   = aws_api_gateway_method.task_list_tasks_post.http_method
+          authorization = aws_api_gateway_method.task_list_tasks_post.authorization
+          authorizer_id = aws_api_gateway_method.task_list_tasks_post.authorizer_id
+        }
+        task_list_tasks_get = {
+          http_method   = aws_api_gateway_method.task_list_tasks_get.http_method
+          authorization = aws_api_gateway_method.task_list_tasks_get.authorization
+          authorizer_id = aws_api_gateway_method.task_list_tasks_get.authorizer_id
+        }
+        task_list_tasks_taskid_put = {
+          http_method   = aws_api_gateway_method.task_list_tasks_taskid_put.http_method
+          authorization = aws_api_gateway_method.task_list_tasks_taskid_put.authorization
+          authorizer_id = aws_api_gateway_method.task_list_tasks_taskid_put.authorizer_id
+        }
+        task_list_tasks_taskid_delete = {
+          http_method   = aws_api_gateway_method.task_list_tasks_taskid_delete.http_method
+          authorization = aws_api_gateway_method.task_list_tasks_taskid_delete.authorization
+          authorizer_id = aws_api_gateway_method.task_list_tasks_taskid_delete.authorizer_id
+        }
+        submit_user_request_post = {
+          http_method   = aws_api_gateway_method.submit_user_request_post.http_method
+          authorization = aws_api_gateway_method.submit_user_request_post.authorization
+          authorizer_id = aws_api_gateway_method.submit_user_request_post.authorizer_id
+        }
+      }
+      integrations = {
+        post_integration = {
+          type                    = aws_api_gateway_integration.post_integration.type
+          integration_http_method = aws_api_gateway_integration.post_integration.integration_http_method
+          uri                     = aws_api_gateway_integration.post_integration.uri
+        }
+        get_integration = {
+          type                    = aws_api_gateway_integration.get_integration.type
+          integration_http_method = aws_api_gateway_integration.get_integration.integration_http_method
+          uri                     = aws_api_gateway_integration.get_integration.uri
+        }
+        put_integration = {
+          type                    = aws_api_gateway_integration.put_integration.type
+          integration_http_method = aws_api_gateway_integration.put_integration.integration_http_method
+          uri                     = aws_api_gateway_integration.put_integration.uri
+        }
+        task_list_get_integration = {
+          type                    = aws_api_gateway_integration.task_list_get_integration.type
+          integration_http_method = aws_api_gateway_integration.task_list_get_integration.integration_http_method
+          uri                     = aws_api_gateway_integration.task_list_get_integration.uri
+        }
+        task_list_report_get_integration = {
+          type                    = aws_api_gateway_integration.task_list_report_get_integration.type
+          integration_http_method = aws_api_gateway_integration.task_list_report_get_integration.integration_http_method
+          uri                     = aws_api_gateway_integration.task_list_report_get_integration.uri
+        }
+        task_list_tasks_post_integration = {
+          type                    = aws_api_gateway_integration.task_list_tasks_post_integration.type
+          integration_http_method = aws_api_gateway_integration.task_list_tasks_post_integration.integration_http_method
+          uri                     = aws_api_gateway_integration.task_list_tasks_post_integration.uri
+        }
+        task_list_tasks_get_integration = {
+          type                    = aws_api_gateway_integration.task_list_tasks_get_integration.type
+          integration_http_method = aws_api_gateway_integration.task_list_tasks_get_integration.integration_http_method
+          uri                     = aws_api_gateway_integration.task_list_tasks_get_integration.uri
+        }
+        task_list_tasks_taskid_put_integration = {
+          type                    = aws_api_gateway_integration.task_list_tasks_taskid_put_integration.type
+          integration_http_method = aws_api_gateway_integration.task_list_tasks_taskid_put_integration.integration_http_method
+          uri                     = aws_api_gateway_integration.task_list_tasks_taskid_put_integration.uri
+        }
+        task_list_tasks_taskid_delete_integration = {
+          type                    = aws_api_gateway_integration.task_list_tasks_taskid_delete_integration.type
+          integration_http_method = aws_api_gateway_integration.task_list_tasks_taskid_delete_integration.integration_http_method
+          uri                     = aws_api_gateway_integration.task_list_tasks_taskid_delete_integration.uri
+        }
+        submit_user_request_post_integration = {
+          type                    = aws_api_gateway_integration.submit_user_request_post_integration.type
+          integration_http_method = aws_api_gateway_integration.submit_user_request_post_integration.integration_http_method
+          uri                     = aws_api_gateway_integration.submit_user_request_post_integration.uri
+        }
+      }
+    }))
+  }
 }
 
 output "api_gateway_id" {

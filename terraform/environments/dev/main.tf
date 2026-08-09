@@ -96,9 +96,23 @@ module "lambda_delete_task_item" {
 resource "aws_sqs_queue" "user_requests" {
   name = var.queue_name
 
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.user_requests_dlq.arn
+    maxReceiveCount     = 5
+  })
+
   tags = {
     Environment = var.environment
     Name        = "user-request-queue"
+  }
+}
+
+resource "aws_sqs_queue" "user_requests_dlq" {
+  name = "${var.queue_name}-dlq"
+
+  tags = {
+    Environment = var.environment
+    Name        = "user-request-queue-dlq"
   }
 }
 
@@ -115,6 +129,35 @@ module "lambda_submit_user_request" {
   sqs_queue_arn    = aws_sqs_queue.user_requests.arn
   sqs_actions      = ["sqs:SendMessage"]
   enable_sqs       = true
+}
+
+module "lambda_process_user_request" {
+  source           = "../../modules/lambda"
+  region           = "us-east-1"
+  function_name    = "todo-process-user-request"
+  lambda_zip_path  = "../../../target/todolist-project-1.0-SNAPSHOT.jar"
+  table_name       = module.dynamodb.table_name
+  table_arn        = module.dynamodb.table_arn
+  handler          = "com.exemplo.lambda.ProcessUserRequestLambda::handleRequest"
+  dynamodb_actions = ["dynamodb:Query"]
+  s3_bucket_arn    = aws_s3_bucket.reports.arn
+  s3_bucket_name   = aws_s3_bucket.reports.bucket
+  s3_actions       = ["s3:PutObject"]
+  enable_s3        = true
+  enable_ses       = true
+  ses_actions      = ["ses:SendEmail"]
+  ses_from_email   = var.ses_from_email
+  sqs_queue_url    = aws_sqs_queue.user_requests.url
+  sqs_queue_arn    = aws_sqs_queue.user_requests.arn
+  sqs_actions      = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+  enable_sqs       = true
+}
+
+resource "aws_lambda_event_source_mapping" "process_user_request_sqs" {
+  event_source_arn = aws_sqs_queue.user_requests.arn
+  function_name    = module.lambda_process_user_request.aws_lambda_function_arn
+  batch_size       = 1
+  enabled          = true
 }
 
 resource "aws_s3_bucket" "reports" {
