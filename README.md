@@ -1,126 +1,350 @@
-# TODOList-Project
+# 📝 TODOList Project
 
-## API para gerenciamento de listas de tarefas
+> API serverless para gerenciamento de listas e tarefas, construída em **Java** sobre a **AWS**, com infraestrutura provisionada via **Terraform** e arquitetura orientada a eventos para processamento assíncrono de relatórios.
 
-## Descrição
+---
 
-API desenvolvida utilizando Java, AWS Lambda e DynamoDB para gerenciamento de listas de tarefas.
+## 📑 Sumário
 
-A aplicação utiliza o padrão **DynamoDB Single Table Design**, permitindo que diferentes entidades sejam armazenadas na mesma tabela utilizando uma estratégia de chaves composta.
+* [Sobre o projeto](#-sobre-o-projeto)
+* [Tecnologias](#-tecnologias)
+* [Arquitetura](#️-arquitetura)
+* [Funcionalidades](#-funcionalidades)
+* [Fluxo de relatórios](#-fluxo-de-relatórios)
+* [Modelagem de dados](#️-modelagem-de-dados-dynamodb)
+* [Autenticação](#-autenticação)
+* [Infraestrutura como código](#️-infraestrutura-como-código)
+* [Estrutura do projeto](#-estrutura-do-projeto)
+* [Pré-requisitos](#-pré-requisitos)
+* [Como executar](#️-como-executar)
+* [Testes](#-testes)
+* [Deploy](#-deploy)
+* [Objetivo do projeto](#-objetivo-do-projeto)
+* [Autor](#-autor)
 
-## Funcionalidades implementadas
+---
 
-* Criar listas de tarefas
-* Listar listas de tarefas utilizando DynamoDB GSI
-* Atualizar listas de tarefas
-* Infraestrutura provisionada com Terraform
+## 📖 Sobre o projeto
 
-## Arquitetura DynamoDB
+O **TODOList Project** é uma API serverless para criação e gerenciamento de listas de tarefas (*task lists*) e seus itens (*task items*), com suporte à geração assíncrona de relatórios enviados por e-mail.
 
-A tabela utiliza o modelo Single Table Design.
+O projeto foi desenvolvido para explorar, na prática, uma arquitetura serverless utilizando serviços da AWS, abrangendo autenticação, persistência de dados, APIs REST, mensageria, armazenamento de objetos, processamento assíncrono e infraestrutura como código.
 
-### Entidade: Lista
+---
 
-Chave principal:
+## 🚀 Tecnologias
 
+| Categoria              | Tecnologia         |
+| ---------------------- | ------------------ |
+| **Linguagem**          | Java 17            |
+| **Build**              | Maven              |
+| **Compute**            | AWS Lambda         |
+| **API**                | Amazon API Gateway |
+| **Banco de dados**     | Amazon DynamoDB    |
+| **Autenticação**       | Amazon Cognito     |
+| **Mensageria**         | Amazon SQS         |
+| **Armazenamento**      | Amazon S3          |
+| **E-mail**             | Amazon SES         |
+| **Segurança e acesso** | AWS IAM            |
+| **Infraestrutura**     | Terraform          |
+| **Testes**             | JUnit, Mockito     |
+
+---
+
+## 🏗️ Arquitetura
+
+```text
+                         ┌──────────────────┐
+                         │    API Client    │
+                         │  Postman / App   │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │   API Gateway    │
+                         └────────┬─────────┘
+                                  │
+                        Autorização via Cognito
+                                  │
+              ┌───────────────────┴───────────────────┐
+              │                                       │
+              ▼                                       ▼
+     ┌──────────────────────┐              ┌──────────────────────┐
+     │ Task List / Task Item│              │  Submit User Request │
+     │        Lambdas       │              │        Lambda        │
+     └───────────┬──────────┘              └───────────┬──────────┘
+                 │                                     │
+                 ▼                                     ▼
+          ┌────────────┐                         ┌────────────┐
+          │  DynamoDB  │                         │  Amazon SQS│
+          └────────────┘                         └─────┬──────┘
+                                                       │
+                                                       ▼
+                                             ┌──────────────────────┐
+                                             │ Process User Request │
+                                             │        Lambda        │
+                                             └───────────┬──────────┘
+                                                         │
+                                  ┌──────────────────────┼──────────────────────┐
+                                  ▼                      ▼                      ▼
+                            ┌───────────┐          ┌───────────┐          ┌───────────┐
+                            │    S3     │          │ DynamoDB  │          │    SES    │
+                            │ Relatório │          │  Consulta │          │  E-mail   │
+                            └───────────┘          └───────────┘          └───────────┘
 ```
-PK = LIST#<listaId>
+
+### Resumo do fluxo
+
+1. O cliente autentica-se utilizando **Amazon Cognito**.
+2. O cliente envia requisições autenticadas para o **API Gateway**.
+3. O API Gateway direciona as requisições para as **AWS Lambda Functions**.
+4. As operações de listas e tarefas utilizam o **Amazon DynamoDB** para persistência.
+5. Solicitações de relatório são enviadas de forma assíncrona para o **Amazon SQS**.
+6. A `ProcessUserRequestLambda` consome a mensagem da fila.
+7. A Lambda consulta os dados no **DynamoDB**.
+8. O relatório é gerado e armazenado no **Amazon S3**.
+9. O usuário recebe uma notificação por e-mail através do **Amazon SES**.
+
+---
+
+## 📋 Funcionalidades
+
+### 📌 Task Lists
+
+* ➕ Criar lista de tarefas
+* 🔍 Consultar uma lista
+* 📄 Listar listas do usuário
+* ✏️ Atualizar lista
+* 🗑️ Excluir lista
+
+### ✅ Task Items
+
+* ➕ Criar tarefa em uma lista
+* 📄 Listar tarefas de uma lista
+* ✏️ Atualizar tarefa
+* 🗑️ Excluir tarefa
+
+### 📊 Relatórios
+
+* 📨 Solicitar geração de relatório
+* ⚡ Processar a solicitação de forma assíncrona
+* 📄 Gerar relatório com os dados da lista
+* ☁️ Armazenar o relatório no Amazon S3
+* 📬 Enviar o relatório por e-mail utilizando Amazon SES
+
+---
+
+## 📨 Fluxo de relatórios
+
+O processamento de relatórios utiliza uma arquitetura assíncrona baseada em **Amazon SQS**:
+
+```text
+Cliente
+   │
+   ▼
+POST /user-requests
+   │
+   ▼
+API Gateway
+   │
+   ▼
+SubmitUserRequestLambda
+   │
+   ▼
+Amazon SQS
+   │
+   ▼
+ProcessUserRequestLambda
+   │
+   ├──────────────► DynamoDB
+   │                  │
+   │                  ▼
+   │              Dados da lista
+   │
+   ├──────────────► Amazon S3
+   │                  │
+   │                  ▼
+   │             Arquivo CSV
+   │
+   └──────────────► Amazon SES
+                      │
+                      ▼
+                  E-mail do usuário
+```
+
+A API retorna **HTTP 202 Accepted** imediatamente após a solicitação ser enviada para a fila, enquanto o processamento do relatório ocorre de forma independente.
+
+Esse modelo permite desacoplar a requisição HTTP do processamento do relatório e evita que o cliente precise aguardar a conclusão da operação.
+
+---
+
+## 🗄️ Modelagem de dados — DynamoDB
+
+O projeto utiliza **Single Table Design** para armazenar listas e tarefas em uma única tabela.
+
+### Task List
+
+```text
+PK = LIST#<listId>
 SK = META
 ```
 
-Exemplo:
+### Task Item
 
-```json
-{
-  "PK": "LIST#85c429db-c426-447c-940e-702ee4ee4612",
-  "SK": "META",
-  "name": "Estudar AWS DynamoDB"
-}
+```text
+PK = LIST#<listId>
+SK = TASK#<taskId>
 ```
 
-### Índice Global Secundário (GSI1)
+O projeto também utiliza **Global Secondary Indexes (GSI)** para suportar consultas específicas sem a necessidade de realizar operações de `Scan`.
 
-O GSI1 é utilizado para listar todas as listas existentes.
+Essa abordagem permite organizar diferentes tipos de entidades dentro da mesma tabela, mantendo padrões de acesso previsíveis.
 
-Estrutura:
+---
 
+## 🔐 Autenticação
+
+A autenticação é realizada utilizando **Amazon Cognito** e tokens **JWT**.
+
+```text
+Usuário
+   │
+   ▼
+Amazon Cognito
+   │
+   ▼
+JWT Token
+   │
+   ▼
+API Gateway
+   │
+   ▼
+AWS Lambda
 ```
-GSI1PK = LIST
-GSI1SK = LIST#<listaId>
+
+O **API Gateway** utiliza o Cognito para validar a autenticação das requisições antes de encaminhá-las para as Lambdas.
+
+As informações do usuário autenticado são utilizadas pela aplicação para garantir o acesso aos recursos pertencentes ao usuário.
+
+---
+
+## ☁️ Infraestrutura como código
+
+Toda a infraestrutura da aplicação é provisionada utilizando **Terraform**.
+
+A infraestrutura está organizada em módulos reutilizáveis e ambientes separados:
+
+```text
+terraform/
+├── environments/
+│   └── dev/
+│
+└── modules/
+    ├── apigateway/
+    ├── dynamodb/
+    └── lambda/
 ```
 
-Consulta de listas:
+Entre os principais recursos provisionados estão:
 
-```
-Query GSI1
+* AWS Lambda
+* Amazon API Gateway
+* Amazon DynamoDB
+* Amazon Cognito
+* Amazon SQS
+* Amazon S3
+* Amazon SES
+* AWS IAM
+* Event Source Mapping entre SQS e Lambda
 
-GSI1PK = LIST
-```
+---
 
-## Estrutura do projeto
+## 📁 Estrutura do projeto
 
-```
-TODOList-Project
+A estrutura atual do código Java está organizada por Lambda:
+
+```text
+TODOList-Project/
+│
+├── .github/
+│   └── workflows/
+│
+├── scripts/
 │
 ├── src/
 │   ├── main/
 │   │   └── java/
-│   │       └── com/exemplo/lambda/
-│   │           ├── CreateTaskListLambda.java
-│   │           ├── ListTaskListsLambda.java
-│   │           └── UpdateTaskListLambda.java
+│   │       └── com/
+│   │           └── exemplo/
+│   │               └── lambda/
+│   │                   ├── CreateTaskListLambda.java
+│   │                   ├── GetTaskListLambda.java
+│   │                   ├── ListTaskListsLambda.java
+│   │                   ├── UpdateTaskListLambda.java
+│   │                   ├── DeleteTaskListLambda.java
+│   │                   ├── CreateTaskItemLambda.java
+│   │                   ├── ListTaskItemsLambda.java
+│   │                   ├── UpdateTaskItemLambda.java
+│   │                   ├── DeleteTaskItemLambda.java
+│   │                   ├── SubmitUserRequestLambda.java
+│   │                   └── ProcessUserRequestLambda.java
 │   │
 │   └── test/
 │       └── java/
-│           └── com/exemplo/lambda/
+│           └── com/
+│               └── exemplo/
+│                   └── lambda/
 │
 ├── terraform/
-│   └── Infraestrutura AWS
-│
-├── scripts/
+│   ├── environments/
+│   │   └── dev/
+│   │
+│   └── modules/
+│       ├── apigateway/
+│       ├── dynamodb/
+│       └── lambda/
 │
 ├── pom.xml
 └── README.md
 ```
 
-## Tecnologias utilizadas
+---
+
+## 🔧 Pré-requisitos
+
+Antes de executar o projeto, é necessário ter:
 
 * Java 17
-* AWS Lambda
-* Amazon DynamoDB
-* Amazon API Gateway
-* Terraform
 * Maven
-* AWS SDK for Java
+* AWS CLI
+* Terraform
+* Conta AWS
+* Credenciais AWS configuradas
 
-## Requisitos
-
-Antes de executar o projeto, é necessário possuir:
-
-* Java 17 instalado
-* Maven instalado
-* AWS CLI configurado
-* Terraform instalado
-
-## Executando os testes
-
-Execute:
+Configure suas credenciais utilizando:
 
 ```bash
-mvn test
+aws configure
 ```
 
-## Gerando o pacote das Lambdas
+---
 
-Execute:
+## ▶️ Como executar
+
+Clone o repositório:
 
 ```bash
-mvn package
+git clone <url-do-repositorio>
+cd TODOList-Project
 ```
 
-## Deploy da infraestrutura
+Compile o projeto:
 
-Acesse o diretório do ambiente Terraform:
+```bash
+mvn clean package
+```
+
+Acesse o ambiente Terraform:
 
 ```bash
 cd terraform/environments/dev
@@ -132,7 +356,7 @@ Inicialize o Terraform:
 terraform init
 ```
 
-Valide as alterações:
+Visualize o plano:
 
 ```bash
 terraform plan
@@ -144,113 +368,70 @@ Aplique a infraestrutura:
 terraform apply
 ```
 
-## Endpoints da API
+---
 
-### Criar lista
+## 🧪 Testes
 
-**POST**
+Os testes automatizados utilizam **JUnit** e **Mockito**.
 
-```
-/task-lists
-```
+Para executar os testes:
 
-Body:
-
-```json
-{
-  "name": "Estudar AWS DynamoDB"
-}
+```bash
+mvn test
 ```
 
-Resposta:
+Para compilar o projeto:
 
-```json
-{
-  "name": "Estudar AWS DynamoDB",
-  "id": "85c429db-c426-447c-940e-702ee4ee4612"
-}
+```bash
+mvn package
 ```
 
 ---
 
-### Listar listas
+## 📦 Deploy
 
-**GET**
+O deploy da aplicação é realizado utilizando **Terraform**.
 
+```bash
+cd terraform/environments/dev
+
+terraform init
+terraform plan
+terraform apply
 ```
-/task-lists
-```
 
-Resposta:
-
-```json
-[
-  {
-    "name": "Estudar AWS DynamoDB",
-    "id": "85c429db-c426-447c-940e-702ee4ee4612"
-  }
-]
-```
+O Terraform é responsável por provisionar e atualizar os recursos AWS utilizados pela aplicação, incluindo as funções Lambda e suas respectivas configurações de infraestrutura.
 
 ---
 
-### Atualizar lista
+## 🎯 Objetivo do projeto
 
-**PUT**
+O projeto foi desenvolvido com foco no aprendizado prático de **desenvolvimento backend, computação serverless e serviços AWS**.
 
-```
-/task-lists
-```
+Os principais conceitos explorados foram:
 
-Body:
-
-```json
-{
-  "id": "85c429db-c426-447c-940e-702ee4ee4612",
-  "name": "Estudar DynamoDB Single Table Design"
-}
-```
-
-Resposta:
-
-```json
-{
-  "name": "Estudar DynamoDB Single Table Design",
-  "id": "85c429db-c426-447c-940e-702ee4ee4612"
-}
-```
+* 🔹 Desenvolvimento de APIs REST
+* 🔹 Java 17
+* 🔹 AWS Lambda
+* 🔹 Amazon API Gateway
+* 🔹 Amazon DynamoDB
+* 🔹 Single Table Design
+* 🔹 Amazon Cognito
+* 🔹 JSON Web Tokens (JWT)
+* 🔹 Amazon SQS
+* 🔹 Processamento assíncrono
+* 🔹 Amazon S3
+* 🔹 Amazon SES
+* 🔹 AWS IAM
+* 🔹 Terraform
+* 🔹 Infraestrutura como código
+* 🔹 Testes automatizados com JUnit e Mockito
+* 🔹 Arquitetura orientada a eventos
 
 ---
 
-### Listar tarefas de uma lista
+## 👨‍💻 Autor
 
-**GET**
+**Fabrício Costa**
 
-```
-/task-lists/{listId}/tasks
-```
-
-Resposta:
-
-```json
-[
-  {
-    "taskId": "123",
-    "name": "Estudar Lambda Java",
-    "status": "PENDING",
-    "createdAt": "2026-08-07T01:16:24Z"
-  }
-]
-```
-
-## Próximas implementações
-
-* Criar CRUD de tarefas (Tasks)
-* Implementar relacionamento entre listas e tarefas utilizando Single Table Design:
-
-```
-PK = LIST#<listaId>
-SK = TASK#<taskId>
-```
-
-* Implementar remoção de listas e tarefas
+Backend Developer com foco em **Java, AWS e desenvolvimento de aplicações serverless**.
