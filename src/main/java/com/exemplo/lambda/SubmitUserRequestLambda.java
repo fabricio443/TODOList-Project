@@ -36,6 +36,16 @@ public class SubmitUserRequestLambda implements RequestHandler<Map<String, Objec
                 return response(500, "Queue URL is not configured");
             }
 
+            String userSub = extractUserSub(input);
+            if (userSub == null || userSub.isBlank()) {
+                return response(400, "userSub is required");
+            }
+
+            String userEmail = extractUserEmail(input);
+            if (userEmail == null || userEmail.isBlank()) {
+                return response(400, "email is required");
+            }
+
             Object bodyValue = input == null ? null : input.get("body");
             Map<String, Object> body = parseBody(bodyValue);
 
@@ -43,7 +53,12 @@ public class SubmitUserRequestLambda implements RequestHandler<Map<String, Objec
                 return response(400, "Payload inválido ou ausente");
             }
 
-            String messageBody = objectMapper.writeValueAsString(body);
+            Map<String, Object> message = new HashMap<>();
+            message.put("userSub", userSub);
+            message.put("email", userEmail);
+            message.put("request", body);
+
+            String messageBody = objectMapper.writeValueAsString(message);
             SendMessageRequest sendMessageRequest = new SendMessageRequest()
                     .withQueueUrl(queueUrl)
                     .withMessageBody(messageBody);
@@ -74,6 +89,54 @@ public class SubmitUserRequestLambda implements RequestHandler<Map<String, Objec
             return objectMapper.convertValue(mapBody, new TypeReference<Map<String, Object>>() {});
         }
         return null;
+    }
+
+    private String extractUserSub(Map<String, Object> input) {
+        if (input == null) {
+            return null;
+        }
+
+        Object requestContextValue = input.get("requestContext");
+        if (!(requestContextValue instanceof Map<?, ?> requestContext)) {
+            return null;
+        }
+
+        Object authorizerValue = requestContext.get("authorizer");
+        if (!(authorizerValue instanceof Map<?, ?> authorizer)) {
+            return null;
+        }
+
+        Object claimsValue = authorizer.get("claims");
+        if (!(claimsValue instanceof Map<?, ?> claims)) {
+            return null;
+        }
+
+        Object subValue = claims.get("sub");
+        return subValue instanceof String ? (String) subValue : null;
+    }
+
+    private String extractUserEmail(Map<String, Object> input) {
+        if (input == null) {
+            return null;
+        }
+
+        Object requestContextValue = input.get("requestContext");
+        if (!(requestContextValue instanceof Map<?, ?> requestContext)) {
+            return null;
+        }
+
+        Object authorizerValue = requestContext.get("authorizer");
+        if (!(authorizerValue instanceof Map<?, ?> authorizer)) {
+            return null;
+        }
+
+        Object claimsValue = authorizer.get("claims");
+        if (!(claimsValue instanceof Map<?, ?> claims)) {
+            return null;
+        }
+
+        Object emailValue = claims.get("email");
+        return emailValue instanceof String ? (String) emailValue : null;
     }
 
     private Map<String, Object> response(int statusCode, String body) {

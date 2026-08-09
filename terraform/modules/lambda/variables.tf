@@ -84,3 +84,21 @@ variable "enable_sqs" {
   type        = bool
   default     = false
 }
+
+variable "enable_ses" {
+  description = "Whether to attach SES policy to the Lambda"
+  type        = bool
+  default     = false
+}
+
+variable "ses_actions" {
+  description = "SES actions for the Lambda role (optional)"
+  type        = list(string)
+  default     = []
+}
+
+variable "ses_from_email" {
+  description = "SES source email address (optional)"
+  type        = string
+  default     = ""
+}

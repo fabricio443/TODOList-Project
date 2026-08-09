@@ -50,6 +50,7 @@ public class CreateTaskListLambda implements RequestHandler<Map<String, Object>,
             }
 
             String id = UUID.randomUUID().toString();
+            String userSub = extractUserSub(input);
 
             Map<String, AttributeValue> item = new HashMap<>();
             // Primary key for list entity
@@ -59,6 +60,11 @@ public class CreateTaskListLambda implements RequestHandler<Map<String, Object>,
             item.put("GSI1SK", new AttributeValue("LIST#" + id));
             item.put("name", new AttributeValue(name));
             item.put("type", new AttributeValue("task-list"));
+            if (userSub != null && !userSub.isBlank()) {
+                item.put("userSub", new AttributeValue(userSub));
+                item.put("GSI2PK", new AttributeValue("USER#" + userSub));
+                item.put("GSI2SK", new AttributeValue("LIST#" + id));
+            }
 
             dynamoDB.putItem(new PutItemRequest(tableName, item));
 
@@ -73,7 +79,31 @@ public class CreateTaskListLambda implements RequestHandler<Map<String, Object>,
         }
     }
 
-  private Map<String, Object> response(int statusCode, Map<String, Object> body) {
+    private String extractUserSub(Map<String, Object> input) {
+        if (input == null) {
+            return null;
+        }
+
+        Object requestContextValue = input.get("requestContext");
+        if (!(requestContextValue instanceof Map<?, ?> requestContext)) {
+            return null;
+        }
+
+        Object authorizerValue = requestContext.get("authorizer");
+        if (!(authorizerValue instanceof Map<?, ?> authorizer)) {
+            return null;
+        }
+
+        Object claimsValue = authorizer.get("claims");
+        if (!(claimsValue instanceof Map<?, ?> claims)) {
+            return null;
+        }
+
+        Object subValue = claims.get("sub");
+        return subValue instanceof String ? (String) subValue : null;
+    }
+
+    private Map<String, Object> response(int statusCode, Map<String, Object> body) {
     Map<String, Object> response = new HashMap<>();
 
     try {
