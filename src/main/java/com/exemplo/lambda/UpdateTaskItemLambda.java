@@ -62,6 +62,9 @@ public class UpdateTaskItemLambda implements RequestHandler<Map<String, Object>,
                 return response(400, Map.of("message", "name is required"));
             }
 
+            Object statusValue = body == null ? null : body.get("status");
+            String updatedStatus = statusValue instanceof String statusString ? statusString : null;
+
             Map<String, AttributeValue> key = new HashMap<>();
             key.put("PK", new AttributeValue("LIST#" + listId));
             key.put("SK", new AttributeValue("TASK#" + taskId));
@@ -76,17 +79,28 @@ public class UpdateTaskItemLambda implements RequestHandler<Map<String, Object>,
                 return response(404, Map.of("message", "Task item not found"));
             }
 
-            String status = existing.getOrDefault("status", new AttributeValue("PENDING")).getS();
+            String existingStatus = existing.getOrDefault("status", new AttributeValue("PENDING")).getS();
             String createdAt = existing.getOrDefault("createdAt", new AttributeValue("")).getS();
+            String persistedStatus = updatedStatus != null ? updatedStatus : existingStatus;
 
-            Map<String, AttributeValue> values = Map.of(":name", new AttributeValue(name));
+            Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
+            Map<String, String> expressionAttributeNames = new HashMap<>();
+            expressionAttributeNames.put("#name", "name");
+            expressionAttributeValues.put(":name", new AttributeValue(name));
+
+            String updateExpression = "SET #name = :name";
+            if (updatedStatus != null) {
+                updateExpression += ", #status = :status";
+                expressionAttributeNames.put("#status", "status");
+                expressionAttributeValues.put(":status", new AttributeValue(updatedStatus));
+            }
 
             UpdateItemRequest updateRequest = new UpdateItemRequest()
                     .withTableName(tableName)
                     .withKey(key)
-                    .withUpdateExpression("SET #name = :name")
-                    .withExpressionAttributeNames(Map.of("#name", "name"))
-                    .withExpressionAttributeValues(values);
+                    .withUpdateExpression(updateExpression)
+                    .withExpressionAttributeNames(expressionAttributeNames)
+                    .withExpressionAttributeValues(expressionAttributeValues);
 
             dynamoDB.updateItem(updateRequest);
 
@@ -94,7 +108,7 @@ public class UpdateTaskItemLambda implements RequestHandler<Map<String, Object>,
             responseBody.put("listId", listId);
             responseBody.put("taskId", taskId);
             responseBody.put("name", name);
-            responseBody.put("status", status);
+            responseBody.put("status", persistedStatus);
             responseBody.put("createdAt", createdAt);
 
             return response(200, responseBody);
